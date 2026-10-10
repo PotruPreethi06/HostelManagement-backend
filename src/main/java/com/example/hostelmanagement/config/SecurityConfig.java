@@ -1,3 +1,4 @@
+
 package com.example.hostelmanagement.config;
 
 import java.util.List;
@@ -22,176 +23,101 @@ public class SecurityConfig {
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter) {
-
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
-    // =========================
-    // PASSWORD ENCODER
-    // =========================
-
+    // Password encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
-
         return new BCryptPasswordEncoder();
     }
 
-    // =========================
-    // CORS
-    // =========================
-
+    // CORS configuration
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-                new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                List.of(
-                        "http://localhost:5173",
-                        "http://localhost:5174",
-                        "https://hostel-management-frontend-mu.vercel.app"
-                    )
-                );
+            List.of(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "https://hostel-management-frontend-mu.vercel.app"
+            )
+        );
 
         configuration.setAllowedMethods(
-                List.of(
-                        "GET",
-                        "POST",
-                        "PUT",
-                        "DELETE",
-                        "OPTIONS"
-                )
+            List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+                "OPTIONS"
+            )
         );
 
-        configuration.setAllowedHeaders(
-                List.of("*")
-        );
-
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+            new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration(
-                "/**",
-                configuration
-        );
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }
 
-    // =========================
-    // SECURITY FILTER CHAIN
-    // =========================
-
+    // Security filter chain
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
 
         http
-
-            // Disable CSRF for REST API
+            // REST API security
             .csrf(csrf -> csrf.disable())
 
             // Enable CORS
             .cors(cors -> {})
 
-            // JWT = Stateless authentication
+            // JWT authentication is stateless
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
                     SessionCreationPolicy.STATELESS
                 )
             )
 
-            // =========================
-            // AUTHORIZATION
-            // =========================
-
+            // Endpoint permissions
             .authorizeHttpRequests(auth -> auth
 
-                // Browser preflight requests
+                // Allow browser preflight requests
                 .requestMatchers(
-                    HttpMethod.OPTIONS,
-                    "/**"
+                    HttpMethod.OPTIONS, "/**"
                 ).permitAll()
 
-                // =========================
-                // ADMIN LOGIN
-                // =========================
-
+                // Admin login: no existing JWT required
                 .requestMatchers(
-                    "/admins/login"
+                    HttpMethod.POST, "/admins/login"
                 ).permitAll()
 
-                // =========================
-                // ADMIN REGISTRATION
-                // =========================
-
+                // Admin registration
                 .requestMatchers(
-                    HttpMethod.POST,
-                    "/admins"
+                    HttpMethod.POST, "/admins"
                 ).permitAll()
 
-                // =========================
-                // STUDENTS
-                // =========================
+                // Protected endpoints
+                .requestMatchers("/students/**").authenticated()
+                .requestMatchers("/rooms/**").authenticated()
+                .requestMatchers("/fees/**").authenticated()
+                .requestMatchers("/complaints/**").authenticated()
+                .requestMatchers("/attendance/**").authenticated()
+                .requestMatchers("/hostel-updates/**").authenticated()
 
-                .requestMatchers(
-                    "/students/**"
-                ).authenticated()
-
-                // =========================
-                // ROOMS
-                // =========================
-
-                .requestMatchers(
-                    "/rooms/**"
-                ).authenticated()
-
-                // =========================
-                // FEES
-                // =========================
-
-                .requestMatchers(
-                    "/fees/**"
-                ).authenticated()
-
-                // =========================
-                // COMPLAINTS
-                // =========================
-
-                .requestMatchers(
-                    "/complaints/**"
-                ).authenticated()
-
-                // =========================
-                // ATTENDANCE
-                // =========================
-
-                .requestMatchers(
-                    "/attendance/**"
-                ).authenticated()
-
-                // =========================
-                // HOSTEL UPDATES
-                // =========================
-
-                .requestMatchers(
-                    "/hostel-updates/**"
-                ).authenticated()
-
-                // =========================
-                // EVERYTHING ELSE
-                // =========================
-
+                // All remaining endpoints require authentication
                 .anyRequest().authenticated()
             )
 
-            // =========================
-            // JWT FILTER
-            // =========================
-
+            // Register JWT filter
             .addFilterBefore(
                 jwtAuthenticationFilter,
                 UsernamePasswordAuthenticationFilter.class
