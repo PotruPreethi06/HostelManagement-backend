@@ -42,7 +42,9 @@ public class SecurityConfig {
             List.of(
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "https://hostel-management-frontend-mu.vercel.app"
+                "https://hostel-management-frontend-mu.vercel.app",
+                "https://hostel-management-frontend-git-main-hostel-management2.vercel.app",
+                "https://hostel-management-frontend-eozrnrfds-hostel-management2.vercel.app"
             )
         );
 
