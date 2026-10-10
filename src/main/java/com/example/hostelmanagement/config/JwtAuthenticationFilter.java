@@ -1,3 +1,4 @@
+
 package com.example.hostelmanagement.config;
 
 import java.io.IOException;
@@ -23,7 +24,13 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String SECRET_KEY =
-            "MyHostelManagementSystemSecretKey2026ForJWTAuthentication123456";
+        "MyHostelManagementSystemSecretKey2026ForJWTAuthentication123456";
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "/admins/login".equals(request.getServletPath())
+            && "POST".equalsIgnoreCase(request.getMethod());
+    }
 
     @Override
     protected void doFilterInternal(
@@ -42,57 +49,45 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-
             var key = Keys.hmacShaKeyFor(
-                    SECRET_KEY.getBytes(StandardCharsets.UTF_8)
+                SECRET_KEY.getBytes(StandardCharsets.UTF_8)
             );
 
             Claims claims = Jwts.parser()
-                    .verifyWith(key)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
 
             String email = claims.getSubject();
             String role = claims.get("role", String.class);
 
-            System.out.println("=================================");
-            System.out.println("JWT EMAIL: " + email);
-            System.out.println("JWT ROLE: " + role);
-
-            SimpleGrantedAuthority authority =
-                    new SimpleGrantedAuthority("ROLE_" + role);
-
-            System.out.println(
-                    "AUTHORITY: " + authority.getAuthority()
-            );
+            if (email == null || role == null) {
+                response.sendError(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Invalid token claims"
+                );
+                return;
+            }
 
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            email,
-                            null,
-                            List.of(authority)
-                    );
+                new UsernamePasswordAuthenticationToken(
+                    email,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                );
 
-            SecurityContextHolder
-                    .getContext()
-                    .setAuthentication(authentication);
-
-            System.out.println(
-                    "AUTHENTICATED: " +
-                    SecurityContextHolder
-                            .getContext()
-                            .getAuthentication()
-                            .isAuthenticated()
-            );
-
-            System.out.println("=================================");
+            SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
 
         } catch (Exception e) {
+            SecurityContextHolder.clearContext();
 
-            System.out.println(
-                    "Invalid JWT token: " + e.getMessage()
+            response.sendError(
+                HttpServletResponse.SC_UNAUTHORIZED,
+                "Invalid or expired JWT token"
             );
+            return;
         }
 
         filterChain.doFilter(request, response);
