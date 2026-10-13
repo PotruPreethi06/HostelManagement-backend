@@ -24,7 +24,9 @@ public class AdminService {
     @Autowired
     private JwtService jwtService;
 
-    // Create Admin
+    // =========================
+    // CREATE ADMIN
+    // =========================
     public Admin createAdmin(Admin admin) {
 
         String encodedPassword =
@@ -35,13 +37,17 @@ public class AdminService {
         return adminRepository.save(admin);
     }
 
-    // Get All Admins
+    // =========================
+    // GET ALL ADMINS
+    // =========================
     public List<Admin> getAllAdmins() {
 
         return adminRepository.findAll();
     }
 
-    // Get Admin By ID
+    // =========================
+    // GET ADMIN BY ID
+    // =========================
     public Admin getAdminById(Long id) {
 
         return adminRepository.findById(id)
@@ -49,7 +55,9 @@ public class AdminService {
                         new RuntimeException("Admin not found"));
     }
 
-    // Get Admin By Email
+    // =========================
+    // GET ADMIN BY EMAIL
+    // =========================
     public Admin getAdminByEmail(String email) {
 
         return adminRepository.findByEmail(email)
@@ -57,7 +65,9 @@ public class AdminService {
                         new RuntimeException("Admin not found"));
     }
 
-    // Update Admin
+    // =========================
+    // UPDATE ADMIN
+    // =========================
     public Admin updateAdmin(Long id, Admin updatedAdmin) {
 
         Admin existingAdmin = adminRepository.findById(id)
@@ -67,9 +77,9 @@ public class AdminService {
         existingAdmin.setName(updatedAdmin.getName());
         existingAdmin.setEmail(updatedAdmin.getEmail());
 
-        // Encode new password
+        // Encode the new password only if provided
         if (updatedAdmin.getPassword() != null
-                && !updatedAdmin.getPassword().isEmpty()) {
+                && !updatedAdmin.getPassword().isBlank()) {
 
             existingAdmin.setPassword(
                     passwordEncoder.encode(
@@ -84,9 +94,18 @@ public class AdminService {
         return adminRepository.save(existingAdmin);
     }
 
-    // Admin Login + JWT
+    // =========================
+    // ADMIN LOGIN + JWT
+    // =========================
     public LoginResponse login(AdminLoginRequest loginRequest) {
 
+        // Temporary debugging: check received email
+        System.out.println(
+                "Login email received: "
+                + loginRequest.getEmail()
+        );
+
+        // Find admin by email
         Admin admin = adminRepository
                 .findByEmail(loginRequest.getEmail())
                 .orElseThrow(() ->
@@ -94,11 +113,30 @@ public class AdminService {
                                 "Invalid email or password"
                         ));
 
+        // Temporary debugging: confirm admin was found
+        System.out.println(
+                "Admin found: " + admin.getEmail()
+        );
+
+        System.out.println(
+                "Password hash exists: "
+                + (admin.getPassword() != null
+                && !admin.getPassword().isBlank())
+        );
+
+        // Verify password using BCrypt
         boolean passwordMatches =
-                passwordEncoder.matches(
+                loginRequest.getPassword() != null
+                && admin.getPassword() != null
+                && passwordEncoder.matches(
                         loginRequest.getPassword(),
                         admin.getPassword()
                 );
+
+        // Temporary debugging: print match result only
+        System.out.println(
+                "Password matches: " + passwordMatches
+        );
 
         if (!passwordMatches) {
 
@@ -113,6 +151,7 @@ public class AdminService {
                 admin.getRole()
         );
 
+        // Return successful login response
         return new LoginResponse(
                 "Login successful",
                 token,
@@ -122,7 +161,9 @@ public class AdminService {
         );
     }
 
-    // Delete Admin
+    // =========================
+    // DELETE ADMIN
+    // =========================
     public String deleteAdmin(Long id) {
 
         Admin admin = adminRepository.findById(id)
